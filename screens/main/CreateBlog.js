@@ -1,117 +1,173 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Text, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import { auth } from '@react-native-firebase/auth';
-import { firestore } from '@react-native-firebase/firestore';
-import { storage } from '@react-native-firebase/storage';
+import { View, Text, Image, TouchableOpacity, TextInput, StyleSheet, ScrollView } from 'react-native';
+import { addDoc, collection, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import globalStyles from '../../utils/globalStyles';
+import { auth, firestore, firebase } from '../../firebaseConfig';
+import * as ImagePicker from 'expo-image-picker';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-let oldCoverImageURL;
 
-export default function CreateBlog({ navigation, route }) {
+const CreateBlog = ({ navigation, route }) => {
+
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [coverImg, setCoverImg] = useState(null);
 
     let id = route.params?.id;
-    const uid = auth().currentUser.uid;
+    const currentUser = auth.currentUser;
+    const uid = currentUser ? currentUser.uid : null;
 
-    useEffect(() => {
-        if (id) {
-            getBlogData(id);
+
+
+
+
+    const onUploadImage = async () => {
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 1,
+        });
+
+        if (!result.canceled && result.assets.length > 0) {
+            const selectedAsset = result.assets[0];
+            setCoverImg(selectedAsset.uri);
         }
-    }, [id]);
+    };
 
-    function onUploadImage() {
-        ImagePicker.launchImageLibrary(
-            {
-                mediaType: 'photo',
-            },
-            (data) => setCoverImg(data.assets[0].uri)
-        );
-    }
+
+
+
 
     function onCheck() {
         if (id) {
             onUpdate(id);
+
             return;
         }
         onCreate();
     }
 
+    useEffect(() => {
+        if (id && uid) {
+            getBlogData(id);
+        }
+    }, [id, uid]);
+
+
     function getBlogData(id) {
-        firestore
-            .collection('usersBlog')
-            .doc(uid)
-            .collection('blogs')
-            .doc(id)
-            .get()
-            .then((snapshot) => {
+        const blogDocRef = doc(collection(firestore, 'usersBlog', uid, 'blogs'), id);
+        const unsubscribe = onSnapshot(blogDocRef, (snapshot) => {
+            if (snapshot.exists()) {
                 const data = snapshot.data();
                 setTitle(data.title);
                 setContent(data.content);
                 setCoverImg(data.coverImage);
-                oldCoverImageURL = data.coverImage;
-            });
+            }
+        });
+
+        // Return the unsubscribe function
+        return unsubscribe;
     }
 
-    async function upladCoverImg(uid) {
-        const splitPath = coverImg.split('/');
-        const imageName = splitPath[splitPath.length - 1];
-        const reference = storage().ref(`/${uid}/images/${imageName}`);
-        const data = await reference.putFile(coverImg);
-        return await storage().ref(data.metadata.fullPath).getDownloadURL();
-    }
 
-    async function onCreate() {
-        if (!title && !content) {
-            return false;
-        }
-        navigation.navigate('Home');
 
+
+    const uploadCover = async (uid) => {
         try {
-            const downloadURL = await upladCoverImg(uid);
+            if (coverImg) {
+                const response = await fetch(coverImg);
+                const blob = await response.blob();
+                const filename = coverImg.substring(coverImg.lastIndexOf('/') + 1);
+                const ref = firebase.storage().ref().child(`images/${filename}`);
+                await ref.put(blob);
+                // Get the download URL of the uploaded image
+                const downloadURL = await ref.getDownloadURL();
+                console.log('url from firsebase: ', downloadURL)
 
-            firestore
-                .collection('usersBlog')
-                .doc(uid)
-                .collection('blogs')
-                .add({
+                return downloadURL;
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+
+
+
+
+    const onCreate = async () => {
+        if (!title || !content) {
+            console.log('Title and content are required.');
+            return;
+        }
+
+        const downloadURL = await uploadCover(uid);
+
+        if (downloadURL) {
+            try {
+                await addDoc(collection(firestore, 'usersBlog', uid, 'blogs'), {
                     title,
                     content,
                     coverImage: downloadURL,
-                    createdAt: firestore.FieldValue.serverTimestamp(),
+                    createdAt: serverTimestamp(),
                 });
-        } catch (error) {
-            console.log(error);
+
+                // Clear form fields after creating the blog
+                setTitle('');
+                setContent('');
+                setCoverImg(null);
+                console.warn('succefully uploaded blog data')
+                // onUpdateSuccess();
+
+                navigation.navigate('Home');
+            } catch (error) {
+                console.error(error);
+            }
+        } else {
+            console.log('Failed to upload the cover image.');
         }
-    }
+    };
 
-    async function onUpdate(id) {
-        navigation.navigate('Home');
+
+
+
+    // ... rest of your code
+
+    const onUpdate = async (id) => {
         try {
-            let downloadURL = oldCoverImageURL;
+            let downloadURL = coverImg; // Default to the new cover image URL
 
-            if (oldCoverImageURL !== coverImg) {
-                downloadURL = await upladCoverImg(uid);
+            if (coverImg) {
+                const storageRef = firebase.storage().ref().child(`images/${id}`);
+                const response = await fetch(coverImg);
+                const blob = await response.blob();
+                await storageRef.put(blob); // Upload the image directly to the storage reference
+
+                // Get the download URL of the uploaded image
+                downloadURL = await storageRef.getDownloadURL();
             }
 
-            firestore
-                .collection('usersBlog')
-                .doc(uid)
-                .collection('blogs')
-                .doc(id)
-                .update({
-                    title,
-                    content,
-                    coverImage: downloadURL,
-                    lastUpdate: firestore.FieldValue.serverTimestamp(),
-                });
+            // Update the document in Firestore
+            const blogDocRef = doc(collection(firestore, 'usersBlog', uid, 'blogs'), id);
+            await updateDoc(blogDocRef, {
+                title,
+                content,
+                coverImage: downloadURL,
+                lastUpdate: serverTimestamp(),
+            });
+            getBlogData(id)
+            console.warn("you updated your blog")
+            navigation.navigate('Home');
+
         } catch (error) {
-            console.log(error);
+            console.error(error);
         }
-    }
+    };
+
+
+
 
     return (
         <ScrollView
@@ -140,23 +196,22 @@ export default function CreateBlog({ navigation, route }) {
                     underlineColorAndroid="transparent"
                 />
             </View>
-            <View style={{ flexDirection: 'row', margin: 20 }}>
+            <View>
                 <Image style={styles.image} source={{ uri: coverImg }} resizeMode="cover" />
-                <TouchableOpacity style={styles.touchabelBtn} onPress={onUploadImage}>
-                    <Text style={globalStyles.btnText}>Upload Cover Image</Text>
+                <TouchableOpacity onPress={onUploadImage}>
+                    <Text style={styles.pickImageText}>Pick Cover Image
+                    </Text>
                 </TouchableOpacity>
             </View>
-            <FontAwesome
-                name="check-circle"
-                color="purple"
-                size={44}
-                style={styles.uploadBtn}
-                onPress={onCheck}
-            />
+
+            <View style={styles.uploadContainer}>
+                <TouchableOpacity style={[styles.touchabelBtn, globalStyles.uploadBtn]} onPress={onCheck}>
+                    <Text style={globalStyles.btnText}>Upload Blog</Text>
+                </TouchableOpacity>
+            </View>
         </ScrollView>
     );
-}
-
+};
 const styles = StyleSheet.create({
     input: {
         borderWidth: 1,
@@ -171,7 +226,6 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 18,
         margin: 10,
-        fontFamily: 'Nunito-Regular',
     },
     touchabelBtn: {
         ...globalStyles.primaryTouchableBtn,
@@ -195,4 +249,15 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.5,
         elevation: 10,
     },
-});
+    pickImageText: {
+        color: 'blue',
+        textAlign: 'center'
+    },
+    uploadContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginTop: 20
+    }
+
+})
+export default CreateBlog;

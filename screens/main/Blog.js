@@ -20,11 +20,7 @@ export default function Blog({ route }) {
                     : null
             }
             <Text
-                style={{
-                    ...globalStyles.headingText,
-                    textAlign: 'center',
-                    margin: 10
-                }}
+                style={styles.titleText}
             >{title}</Text>
             <Text style={styles.content}>{content}</Text>
         </ScrollView>
@@ -36,9 +32,13 @@ const styles = StyleSheet.create({
         width: Dimensions.get('screen').width,
         height: 200
     },
+    titleText: {
+        ...globalStyles.headingText,
+        textAlign: 'center',
+        margin: 10
+    },
     content: {
         fontSize: 18,
-        fontFamily: 'Nunito-Regular',
         letterSpacing: 0.1,
         flex: 1,
         flexWrap: 'wrap',

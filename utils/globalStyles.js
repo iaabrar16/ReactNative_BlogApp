@@ -5,24 +5,22 @@ const globalStyles = StyleSheet.create({
         width: '80%',
         margin: 10,
         borderBottomWidth: 0.8,
-        borderBottomColor: 'gray'
+        borderBottomColor: '#4F96EC',
     },
     primaryContainer: {
         backgroundColor: 'white',
-        flex: 1,
+        flex: 1
     },
     headingText: {
         fontSize: 36,
-        fontFamily: 'Nunito-Black',
-        color: 'rgba(0,0,0,0.7)'
+        color: 'rgba(0,0,0,0.7)',
+        textAlign: 'center'
     },
     primaryText: {
         fontSize: 22,
-        fontFamily: 'Nunito-Bold',
     },
     secondaryText: {
         fontSize: 18,
-        fontFamily: 'Nunito-Regular',
         letterSpacing: 0.1,
     },
     primaryTouchableBtn: {
@@ -36,20 +34,32 @@ const globalStyles = StyleSheet.create({
         },
         shadowOpacity: 0.5,
         elevation: 5,
-        backgroundColor: 'purple'
     },
     btnText: {
-        fontFamily: 'Nunito-SemiBold',
         fontSize: 18,
         color: 'white',
         textAlign: 'center'
     },
     largeBtnText: {
-        fontFamily: 'Nunito-Bold',
         fontSize: 22,
         color: 'white',
         textAlign: 'center'
-    }
-})
+    },
+    updateBtn: {
+        backgroundColor: 'black',
 
+    },
+    uploadBtn: {
+        backgroundColor: 'purple'
+    },
+
+    deleteBtn: {
+        backgroundColor: 'black',
+    },
+
+    cancelBtn: {
+        backgroundColor: 'blue',
+    },
+
+})
 export default globalStyles;

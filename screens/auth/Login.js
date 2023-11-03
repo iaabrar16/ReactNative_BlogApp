@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import React, { useContext, useState } from 'react';
+import { View, TextInput, Button, StyleSheet, Text } from 'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebaseConfig';
 import globalStyles from '../../utils/globalStyles';
+import { UserContext } from '../../components/UserContext';
 
-const Login = (props) => {
+
+const Login = () => {
+    const { loggedIn, setLoggedIn } = useContext(UserContext);
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
@@ -20,6 +24,7 @@ const Login = (props) => {
             // Reset email and password fields after successful login
             setEmail('');
             setPassword('');
+            setLoggedIn(true)
 
         } catch (error) {
             console.error(error);
@@ -28,6 +33,8 @@ const Login = (props) => {
 
     return (
         <View style={styles.container}>
+
+
             <TextInput
                 value={email}
                 placeholder='Email'
@@ -54,7 +61,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F3EFEF'
     },
     passwordInput: {
-        marginTop: 10 // Add some spacing between email and password fields
+        marginTop: 10
     }
 });
 

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Image, Text, Button, TextInput, StyleSheet, TouchableOpacity, View } from 'react-native';
 import globalStyles from '../../utils/globalStyles';
 import * as ImagePicker from 'expo-image-picker';
-import Icon from 'react-native-vector-icons/FontAwesome';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, firestore, firebase } from '../../firebaseConfig';
 import { doc, setDoc } from 'firebase/firestore';
@@ -10,7 +9,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import * as FileSystem from 'expo-file-system';
 
 
-const Register = (props) => {
+const Register = () => {
     const [name, setName] = useState()
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -113,7 +112,7 @@ const Register = (props) => {
             setPassword('');
             setDisplayPicture(null);
             setImagePicked(false);
-            props.navigation.navigate('Login');
+            // navigation.navigate('Login');
 
         } catch (error) {
             console.error(error);
@@ -130,17 +129,16 @@ const Register = (props) => {
                     imagePicked ? <Image style={styles.displayPicture}
                         source={{ uri: !displayPicture ? null : displayPicture }}
                     /> :
-                        <Icon name="user-circle" size={50} />
+                        null
                 }
             </View>
             <View style={styles.touchableContainer}>
                 <TouchableOpacity onPress={onPickPicture} style={styles.clickContainer}>
                     <Text style={styles.pictureText}>Pick Picture</Text>
-                    <Icon name="image" size={15} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={onClickPicture} style={styles.clickContainer}>
                     <Text style={styles.pictureText}>Click Picture</Text>
-                    <Icon name="camera" size={15} />
+
                 </TouchableOpacity>
             </View>
 
